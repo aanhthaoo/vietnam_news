@@ -20,28 +20,46 @@ if hasattr(sys.stdout, "reconfigure"):
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = BASE_DIR / "vietnam_news.db"
+sys.path.insert(0, str(BASE_DIR))
 
 
 def run_data_quality_check():
     """
-    Kiểm tra tính toàn vẹn và chất lượng dữ liệu trong SQLite database.
+    Kiểm tra tính toàn vẹn và chất lượng dữ liệu trong PostgreSQL hoặc SQLite database.
     """
-    if not os.path.exists(DB_PATH):
-        print(f"[LỖI] Không tìm thấy file cơ sở dữ liệu tại: {DB_PATH}")
-        return
+    is_pg = False
+    conn = None
 
-    conn = sqlite3.connect(str(DB_PATH))
+    try:
+        from news_pipeline.store_news import is_postgres, get_pg_connection
+        if is_postgres():
+            conn = get_pg_connection()
+            is_pg = True
+            print("[INFO] Đang kết nối tới: PostgreSQL Database")
+    except Exception as e:
+        is_pg = False
+
+    if not conn:
+        if not os.path.exists(DB_PATH):
+            print(f"[LỖI] Không tìm thấy cơ sở dữ liệu PostgreSQL lẫn file SQLite tại: {DB_PATH}")
+            return
+        conn = sqlite3.connect(str(DB_PATH))
+        print(f"[INFO] Đang kết nối tới: SQLite Database ({DB_PATH.name})")
+
     cursor = conn.cursor()
 
     print("=" * 65)
     print("      BÁO CÁO KIỂM ĐỊNH CHẤT LƯỢNG DỮ LIỆU (BI DATA QUALITY)")
     print("=" * 65)
 
-    # Tìm tên bảng phù hợp (news_vietnam_articles hoặc news_articles)
-    cursor.execute("SELECT name FROM sqlite_master WHERE type IN ('table','view') AND name LIKE 'news_%';")
-    tables = [row[0] for row in cursor.fetchall()]
-    
     target_table = "news_vietnam_articles"
+    if is_pg:
+        cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public';")
+        tables = [row[0] for row in cursor.fetchall()]
+    else:
+        cursor.execute("SELECT name FROM sqlite_master WHERE type IN ('table','view') AND name LIKE 'news_%';")
+        tables = [row[0] for row in cursor.fetchall()]
+
     if "news_vietnam_articles" not in tables and "news_articles" in tables:
         target_table = "news_articles"
     elif "news_vietnam_articles" not in tables and len(tables) > 0:
@@ -66,8 +84,12 @@ def run_data_quality_check():
         return
 
     # Lấy danh sách cột của bảng
-    cursor.execute(f"PRAGMA table_info({target_table})")
-    columns = [col[1] for col in cursor.fetchall()]
+    if is_pg:
+        cursor.execute(f"SELECT column_name FROM information_schema.columns WHERE table_name = '{target_table}';")
+        columns = [col[0] for col in cursor.fetchall()]
+    else:
+        cursor.execute(f"PRAGMA table_info({target_table})")
+        columns = [col[1] for col in cursor.fetchall()]
 
     # 2. Kiểm tra độ hoàn thiện dữ liệu (Missing Values)
     cursor.execute(f"SELECT COUNT(*) FROM {target_table} WHERE title IS NULL OR title = ''")

@@ -1,7 +1,7 @@
 # 🗞️ Vietnam News Intelligence Pipeline
 
 > **Bài tập:** Data Engineering Pipeline — Thu thập và phân tích tin tức quốc tế về Việt Nam  
-> **Công nghệ:** NewsAPI · Python · SQLite · Apache Superset  
+> **Công nghệ:** NewsAPI · Python · PostgreSQL 16 · Apache Superset · AI/ML  
 
 ---
 
@@ -12,17 +12,21 @@ vietnam_news/
 ├── news_pipeline/              ← ETL Pipeline (Extract → Transform → Load)
 │   ├── __init__.py
 │   ├── collect_news.py         # Bước 1: Gọi NewsAPI lấy tin
-│   ├── transform_news.py       # Bước 2: Làm sạch + Sentiment + NER
-│   ├── store_news.py           # Bước 3: Lưu vào SQLite
+│   ├── transform_news.py       # Bước 2: Làm sạch + Sentiment + Topics + NER
+│   ├── store_news.py           # Bước 3: Lưu vào PostgreSQL (hỗ trợ SQLite fallback)
+│   ├── check_data_quality.py   # Bước 4: Kiểm định chất lượng dữ liệu
 │   ├── run_pipeline.py         # Entry point: chạy toàn bộ ETL
 │   └── scheduler.py            # Tự động chạy hằng ngày 08:00
+├── ai_models/                  ← AI & Machine Learning
+│   ├── vader_sentiment.py      # VADER Sentiment Analyzer
+│   ├── volume_forecaster.py    # Dự báo khối lượng tin tức (LinearRegression)
+│   └── text_summarizer.py      # Tóm tắt tin tức tự động
 ├── superset_config/            ← Cấu hình Apache Superset
 │   ├── superset_config.py      # Superset settings
-│   ├── setup_news_superset.py  # Tạo Database + Datasets
-│   └── build_news_dashboard.py # Tạo Charts + Dashboard
-├── vietnam_news.db             ← SQLite Database (tự tạo khi chạy)
-├── docker-compose.yml          ← Khởi động Apache Superset
-├── .env                        ← Biến môi trường (API Key, ...)
+│   ├── setup_news_superset.py  # Tạo Database + Datasets trên PostgreSQL
+│   └── build_ai_dashboard.py   # Tự động dựng Dashboard 8 charts
+├── docker-compose.yml          ← Khởi động PostgreSQL 16 & Apache Superset
+├── .env                        ← Biến môi trường (DATABASE_URL, API Key, ...)
 └── requirements.txt            ← Thư viện Python cần cài
 ```
 

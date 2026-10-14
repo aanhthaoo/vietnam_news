@@ -30,7 +30,6 @@ services:
       FLASK_APP: "superset.app:create_app()"
     volumes:
       - ./superset_config:/app/pythonpath
-      - ./vietnam_news.db:/app/data/vietnam_news.db
       - superset_home:/app/superset_home
     entrypoint:
       - /bin/sh

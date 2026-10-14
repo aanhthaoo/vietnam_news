@@ -55,6 +55,9 @@ def get_historical_daily_counts(conn: sqlite3.Connection) -> pd.DataFrame:
         logger.warning(f"[Forecast] Lỗi đọc bảng: {e}")
         df = pd.DataFrame(columns=["date_str", "article_count"])
 
+    if not df.empty:
+        df["date_str"] = df["date_str"].astype(str)
+
     # Xử lý nếu dữ liệu lịch sử chưa đủ 7 ngày
     if len(df) < 7:
         today = datetime.now().date()
@@ -76,7 +79,7 @@ def get_historical_daily_counts(conn: sqlite3.Connection) -> pd.DataFrame:
         if not df.empty:
             existing_dates = set(df["date_str"].tolist())
             synth_df = synth_df[~synth_df["date_str"].isin(existing_dates)]
-            df = pd.concat([synth_df, df], ignore_index=True).sort_values("date_str")
+            df = pd.concat([synth_df, df], ignore_index=True)
         else:
             df = synth_df
 
@@ -90,12 +93,28 @@ def train_and_forecast_volume(horizon_days: int = 7) -> Dict[str, Any]:
     Huấn luyện mô hình LinearRegression và dự báo số lượng bài báo trong `horizon_days` ngày tới.
     Lưu kết quả dự báo vào bảng `news_volume_forecast`.
     """
-    if not os.path.exists(DB_PATH):
-        logger.error(f"[Forecast] Database {DB_PATH} không tồn tại.")
-        return {"error": "Database not found"}
+    conn = None
+    is_pg = False
 
-    conn = sqlite3.connect(str(DB_PATH))
+    try:
+        from news_pipeline.store_news import is_postgres, get_pg_connection
+        if is_postgres():
+            conn = get_pg_connection()
+            is_pg = True
+            logger.info("[Forecast] Lấy dữ liệu huấn luyện từ PostgreSQL.")
+    except Exception as e:
+        is_pg = False
+
+    if not conn:
+        if not os.path.exists(DB_PATH):
+            logger.error(f"[Forecast] Database {DB_PATH} không tồn tại.")
+            return {"error": "Database not found"}
+        conn = sqlite3.connect(str(DB_PATH))
+        logger.info("[Forecast] Lấy dữ liệu huấn luyện từ SQLite fallback.")
+
     df = get_historical_daily_counts(conn)
+    if not is_pg and conn:
+        conn.close()
 
     # Chuẩn bị ma trận huấn luyện
     # X: Chỉ số ngày (0, 1, 2, ...)
@@ -143,38 +162,7 @@ def train_and_forecast_volume(horizon_days: int = 7) -> Dict[str, Any]:
             "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
 
-    # Lưu kết quả vào bảng news_volume_forecast
-    cursor = conn.cursor()
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS news_volume_forecast (
-        id              INTEGER PRIMARY KEY AUTOINCREMENT,
-        forecast_date   TEXT UNIQUE,
-        predicted_count REAL,
-        lower_bound     REAL,
-        upper_bound     REAL,
-        model_type      TEXT,
-        created_at      TEXT
-    );
-    """)
-
-    insert_sql = """
-    INSERT INTO news_volume_forecast 
-        (forecast_date, predicted_count, lower_bound, upper_bound, model_type, created_at)
-    VALUES 
-        (:forecast_date, :predicted_count, :lower_bound, :upper_bound, :model_type, :created_at)
-    ON CONFLICT(forecast_date) DO UPDATE SET
-        predicted_count = excluded.predicted_count,
-        lower_bound     = excluded.lower_bound,
-        upper_bound     = excluded.upper_bound,
-        model_type      = excluded.model_type,
-        created_at      = excluded.created_at;
-    """
-
-    cursor.executemany(insert_sql, forecast_records)
-    conn.commit()
-    conn.close()
-
-    # Lưu vào PostgreSQL nếu kết nối được
+    # 1. Lưu vào PostgreSQL (Primary)
     try:
         from news_pipeline.store_news import is_postgres, get_pg_connection
         if is_postgres():
@@ -203,6 +191,39 @@ def train_and_forecast_volume(horizon_days: int = 7) -> Dict[str, Any]:
             logger.info("[Forecast] Đã lưu dự báo vào PostgreSQL thành công.")
     except Exception as e:
         logger.warning(f"[Forecast] Lỗi lưu PostgreSQL: {e}")
+
+    # 2. Lưu vào SQLite (Fallback / Local file)
+    try:
+        lite_conn = sqlite3.connect(str(DB_PATH))
+        cursor = lite_conn.cursor()
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS news_volume_forecast (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            forecast_date   TEXT UNIQUE,
+            predicted_count REAL,
+            lower_bound     REAL,
+            upper_bound     REAL,
+            model_type      TEXT,
+            created_at      TEXT
+        );
+        """)
+        insert_sql = """
+        INSERT INTO news_volume_forecast 
+            (forecast_date, predicted_count, lower_bound, upper_bound, model_type, created_at)
+        VALUES 
+            (:forecast_date, :predicted_count, :lower_bound, :upper_bound, :model_type, :created_at)
+        ON CONFLICT(forecast_date) DO UPDATE SET
+            predicted_count = excluded.predicted_count,
+            lower_bound     = excluded.lower_bound,
+            upper_bound     = excluded.upper_bound,
+            model_type      = excluded.model_type,
+            created_at      = excluded.created_at;
+        """
+        cursor.executemany(insert_sql, forecast_records)
+        lite_conn.commit()
+        lite_conn.close()
+    except Exception as e:
+        logger.warning(f"[Forecast] Lỗi lưu SQLite fallback: {e}")
 
 
     result = {
