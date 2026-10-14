@@ -1,0 +1,21 @@
+# Môi trường và cấu hình bảo mật
+.env
+.env.*
+!.env.example
+
+# Database SQLite & Cache
+*.db
+*.sqlite3
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store

@@ -1,0 +1,61 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: vietnam_news_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vietnam_news
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: vietnam_news_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_news_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d vietnam_news"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  superset:
+    image: apache/superset:latest
+    container_name: vietnam_news_superset
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    environment:
+      SUPERSET_SECRET_KEY: "vietnam_news_superset_secret_key_2026"
+      PYTHONPATH: "/app/pythonpath"
+      SUPERSET_PORT: "8088"
+      FLASK_APP: "superset.app:create_app()"
+    volumes:
+      - ./superset_config:/app/pythonpath
+      - ./vietnam_news.db:/app/data/vietnam_news.db
+      - superset_home:/app/superset_home
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        if [ ! -f /app/superset_home/.initialized ]; then
+          echo ">>> [1/4] Khởi tạo Superset metadata DB..."
+          superset db upgrade
+          echo ">>> [2/4] Tạo Admin user..."
+          superset fab create-admin \
+            --username admin \
+            --firstname Vietnam \
+            --lastname News \
+            --email admin@vietnamnews.local \
+            --password admin
+          echo ">>> [3/4] Khởi tạo roles & permissions..."
+          superset init
+          echo ">>> [4/4] Setup News Datasets..."
+          python /app/pythonpath/setup_news_superset.py || echo "WARN: setup_news_superset failed"
+          touch /app/superset_home/.initialized
+          echo ">>> ✅ Khởi tạo hoàn tất!"
+        fi
+        echo ">>> Khởi động Superset Server trên port 8088..."
+        /app/docker/entrypoints/run-server.sh
+
+volumes:
+  superset_home:
+  postgres_news_data:

@@ -1,0 +1,21 @@
+# === Vietnam News Pipeline — Requirements ===
+# Core
+requests>=2.31.0
+python-dotenv>=1.0.0
+schedule>=1.2.0
+
+# === NLP & AI Models ===
+textblob>=0.18.0
+spacy>=3.7.0
+beautifulsoup4>=4.12.0
+vaderSentiment>=3.3.2
+google-generativeai>=0.8.0
+
+# === Machine Learning & Data Processing ===
+scikit-learn>=1.4.0
+pandas>=2.2.0
+numpy>=1.26.0
+
+# === Database ===
+psycopg2-binary>=2.9.0
+SQLAlchemy>=2.0.0
