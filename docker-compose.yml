@@ -11,6 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_news_data:/var/lib/postgresql/data
+      - ./postgres_init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d vietnam_news"]
       interval: 5s
@@ -21,6 +22,9 @@ services:
     image: apache/superset:latest
     container_name: vietnam_news_superset
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "8088:8088"
     environment:
@@ -47,8 +51,9 @@ services:
             --password admin
           echo ">>> [3/4] Khởi tạo roles & permissions..."
           superset init
-          echo ">>> [4/4] Setup News Datasets..."
+          echo ">>> [4/4] Setup News Datasets & Build AI Dashboard..."
           python /app/pythonpath/setup_news_superset.py || echo "WARN: setup_news_superset failed"
+          python /app/pythonpath/build_ai_dashboard.py || echo "WARN: build_ai_dashboard failed"
           touch /app/superset_home/.initialized
           echo ">>> ✅ Khởi tạo hoàn tất!"
         fi
