@@ -1,7 +1,29 @@
-# 🗞️ Vietnam News Intelligence Pipeline
+# 🗞️ Vietnam News Intelligence & AI Analytics Pipeline
 
-> **Bài tập:** Data Engineering Pipeline — Thu thập và phân tích tin tức quốc tế về Việt Nam  
-> **Công nghệ:** NewsAPI · Python · PostgreSQL 16 · Apache Superset · AI/ML  
+> **Bài tập lớn:** Data Engineering & Business Intelligence System — Thu thập, Xử lý NLP, Phân tích AI và Trực quan hóa Tin tức Quốc tế về Việt Nam  
+> **Công nghệ:** NewsAPI · Python · PostgreSQL 16 · Apache Superset · Scikit-Learn · VADER & TextBlob · Gemini API · Docker  
+
+---
+
+## 🚀 DÀNH CHO THÀNH VIÊN NHÓM (KHỞI ĐỘNG NHANH 1 LỆNH)
+
+> [!TIP]
+> **Dữ liệu mẫu (>200 bài báo đã qua xử lý AI) đã được đóng gói sẵn trong kho lưu trữ.**  
+> Các thành viên trong nhóm **KHÔNG CẦN** chạy lệnh cào tin NewsAPI (tránh lỗi hết hạn ngạch 100 requests/ngày).
+
+Chỉ cần cài Docker Desktop, mở terminal tại thư mục dự án và chạy duy nhất 1 lệnh:
+
+```bash
+docker compose up -d
+```
+
+### ✨ Quá trình tự động diễn ra:
+1. **PostgreSQL 16** khởi động và **tự động nạp sẵn toàn bộ 213 bài báo, từ khóa và phân cụm tin tức** từ thư mục `postgres_init/01_init_news.sql`.
+2. **Apache Superset** tự động kết nối PostgreSQL, đồng bộ Datasets và **tự động khởi tạo toàn bộ 11 Biểu đồ AI**.
+3. **Truy cập ngay Dashboard:** Mở trình duyệt vào **[http://localhost:8088](http://localhost:8088)**  
+   - Tài khoản: `admin`  
+   - Mật khẩu: `admin`  
+   - Link Dashboard: **[http://localhost:8088/superset/dashboard/2/](http://localhost:8088/superset/dashboard/2/)**
 
 ---
 
@@ -10,155 +32,92 @@
 ```
 vietnam_news/
 ├── news_pipeline/              ← ETL Pipeline (Extract → Transform → Load)
-│   ├── __init__.py
-│   ├── collect_news.py         # Bước 1: Gọi NewsAPI lấy tin
-│   ├── transform_news.py       # Bước 2: Làm sạch + Sentiment + Topics + NER
-│   ├── store_news.py           # Bước 3: Lưu vào PostgreSQL (hỗ trợ SQLite fallback)
-│   ├── check_data_quality.py   # Bước 4: Kiểm định chất lượng dữ liệu
-│   ├── run_pipeline.py         # Entry point: chạy toàn bộ ETL
-│   └── scheduler.py            # Tự động chạy hằng ngày 08:00
-├── ai_models/                  ← AI & Machine Learning
-│   ├── vader_sentiment.py      # VADER Sentiment Analyzer
-│   ├── volume_forecaster.py    # Dự báo khối lượng tin tức (LinearRegression)
-│   └── text_summarizer.py      # Tóm tắt tin tức tự động
-├── superset_config/            ← Cấu hình Apache Superset
-│   ├── superset_config.py      # Superset settings
-│   ├── setup_news_superset.py  # Tạo Database + Datasets trên PostgreSQL
-│   └── build_ai_dashboard.py   # Tự động dựng Dashboard 8 charts
-├── docker-compose.yml          ← Khởi động PostgreSQL 16 & Apache Superset
-├── .env                        ← Biến môi trường (DATABASE_URL, API Key, ...)
-└── requirements.txt            ← Thư viện Python cần cài
+│   ├── collect_news.py         # Bước 1: Gọi NewsAPI lấy tin tức
+│   ├── transform_news.py       # Bước 2: Làm sạch + VADER + spaCy NER + TF-IDF Keywords
+│   ├── store_news.py           # Bước 3: Lưu trữ PostgreSQL (hỗ trợ SQLite fallback)
+│   ├── check_data_quality.py   # Bước 4: Kiểm định chất lượng dữ liệu (Thành viên 5)
+│   ├── run_pipeline.py         # Entry point: Chạy toàn bộ 6 bước ETL tự động
+│   └── scheduler.py            # Tự động hóa chạy pipeline định kỳ hằng ngày 08:00
+├── ai_models/                  ← Hệ thống Mô hình AI & Machine Learning
+│   ├── vader_sentiment.py      # Phân tích cảm xúc Ensemble (VADER + TextBlob)
+│   ├── volume_forecaster.py    # Dự báo khối lượng tin tức 7 ngày (LinearRegression)
+│   ├── text_summarizer.py      # Tóm tắt tin tức tự động (Gemini API & Extractive)
+│   ├── tfidf_keywords.py       # Trích xuất từ khóa TF-IDF & Vận tốc xu hướng (Rising/Falling)
+│   ├── deduplicator.py         # Gom cụm sự kiện bằng Cosine Similarity & TF-IDF
+│   ├── breaking_news.py        # Phát hiện tin nóng đột biến bằng Rolling 7-day Z-Score
+│   ├── source_credibility.py   # Chấm điểm độ tin cậy định lượng nguồn báo quốc tế
+│   ├── vietnam_relevance.py    # Bộ lọc xác thực tin tức Việt Nam (Thành viên 2)
+│   └── topic_classifier.py     # Phân loại 8 chủ đề tin tức (Thành viên 3)
+├── superset_config/            ← Cấu hình Apache Superset BI
+│   ├── superset_config.py      # Cấu hình hệ thống Superset
+│   ├── setup_news_superset.py  # Đăng ký Database & Datasets vật lý / ảo
+│   └── build_ai_dashboard.py   # Tự động khởi tạo Dashboard 11 biểu đồ phân tích
+├── postgres_init/              ← Dữ liệu mồi tự động cho PostgreSQL (Docker)
+│   └── 01_init_news.sql        # Bản dump CSDL đầy đủ bảng, views và dữ liệu bài báo
+├── docker-compose.yml          ← Điều phối dịch vụ PostgreSQL 16 & Apache Superset
+├── .env                        ← Biến môi trường (DATABASE_URL, API Key...)
+└── requirements.txt            ← Thư viện Python phục vụ phát triển
 ```
 
 ---
 
-## ⚙️ Cài Đặt & Khởi Động
+## 👥 Phân Công Nhiệm Vụ Trong Nhóm
 
-### Bước 1 — Cài thư viện Python
+| Thành viên | Trách nhiệm chính | File phụ trách |
+|---|---|---|
+| **Người 1** *(Lead Dev)* | Kiến trúc ETL, CSDL song song, Core AI (Ensemble, Forecast, Gemini, TF-IDF, Deduplication, Breaking News, Credibility), Docker & Superset Dashboard | `store_news.py`, `run_pipeline.py`, các file AI chính, `build_ai_dashboard.py` |
+| **Người 2** *(Junior Dev)* | Xây dựng bộ từ khóa và giải thuật lọc bài báo thực sự về Việt Nam | `ai_models/vietnam_relevance.py` |
+| **Người 3** *(Junior Dev)* | Xây dựng bộ quy tắc phân loại bài báo vào 8 chủ đề chính | `ai_models/topic_classifier.py` |
+| **Người 4** *(Writer/BA)* | Soạn thảo Báo cáo Kỹ thuật (Word) & Slide Thuyết trình bảo vệ | `docs/Bao_Cao_Ky_Thuat.docx`, `Slide_Bao_Ve.pptx` |
+| **Người 5** *(Tester/QA)* | Viết kiểm thử chất lượng dữ liệu (Quality Check) & tính thống kê | `news_pipeline/check_data_quality.py` |
 
+---
+
+## 📊 Dashboard Apache Superset (11 Biểu Đồ AI)
+
+Dashboard **"🤖 Vietnam News AI Analytics & Forecasting"** (ID: 2) bao gồm:
+
+| # | Tên Biểu đồ | Loại Trực quan hóa | Nguồn Dữ liệu |
+|---|---|---|---|
+| 1 | 📰 Tổng số bài báo | Big Number | `news_vietnam_articles` |
+| 2 | 🇻🇳 Tỉ lệ tin chuẩn Việt Nam | Donut Chart | `news_vietnam_relevance` |
+| 3 | 🎭 Cảm xúc Đa mô hình Ensemble | Donut Chart | `news_ensemble_sentiment` |
+| 4 | 🏷️ Phân loại 8 Chủ đề Tin tức | Bar Chart | `news_ai_topics` |
+| 5 | 📈 Dự báo Lượng tin tức 7 ngày tới | Line Chart (Confidence 95%) | `news_forecast_vs_actual` |
+| 6 | 🏆 Top 10 Nguồn báo & Khối lượng | Bar Chart | `news_source_ranking` |
+| 7 | ☁️ Đám mây Từ khóa Tiêu biểu | Word Cloud | `news_keyword_cloud` |
+| 8 | 📋 Danh sách Tin tức & Tóm tắt AI | Interactive Table | `news_ai_summary_table` |
+| 9 | ⭐ Xếp hạng Uy tín Nguồn báo Quốc tế | Ranked Table | `news_source_credibility` |
+| 10 | 🌐 Gom cụm Sự kiện & Độ lan tỏa | Clustered Table | `news_story_clusters` |
+| 11 | ⚡ Xu hướng Từ khóa & Chiều biến động | Velocity Table | `news_keyword_trends` |
+
+---
+
+## 🛠️ Hướng Dẫn Dành Cho Lập Trình Viên (Nâng Cao)
+
+### 1. Cài đặt môi trường Python (để chạy code cục bộ)
 ```bash
+python -m venv .venv
+# Kích hoạt venv (Windows):
+.venv\Scripts\activate
+
 pip install -r requirements.txt
-
-# Tải spaCy model tiếng Anh
 python -m spacy download en_core_web_sm
-
-# Tải TextBlob corpora
-python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger')"
 ```
 
-### Bước 2 — Cấu hình `.env`
-
-Kiểm tra file `.env` đã có sẵn API Key:
-
-```env
-NEWS_API_KEY=0ef074c3cb824ad786d18a687454e30e
-NEWS_KEYWORD=Vietnam
-NEWS_LANGUAGE=en
-NEWS_PAGE_SIZE=100
-NEWS_DB_PATH=vietnam_news.db
-```
-
-### Bước 3 — Chạy ETL Pipeline lần đầu
-
+### 2. Chạy thủ công Pipeline ETL (Thu thập tin mới)
+Nếu muốn thu thập thêm tin tức trực tiếp từ NewsAPI:
 ```bash
-# Chạy thu thập ngay (lấy tin 24h qua)
 python news_pipeline/run_pipeline.py
-
-# Hoặc chỉ định khoảng ngày cụ thể
-python news_pipeline/run_pipeline.py --from 2024-01-01 --to 2024-01-31
-
-# Tìm theo từ khóa khác
-python news_pipeline/run_pipeline.py --keyword "Vietnam economy"
 ```
 
-### Bước 4 — Khởi động Apache Superset
-
+### 3. Cập nhật lại Dashboard sau khi sửa đổi cấu hình
 ```bash
-docker-compose up -d
+docker exec vietnam_news_superset python /app/pythonpath/setup_news_superset.py
+docker exec vietnam_news_superset python /app/pythonpath/build_ai_dashboard.py
 ```
 
-> Lần đầu sẽ tự động: khởi tạo DB metadata → tạo admin → setup Datasets
-
-Truy cập: **http://localhost:8088**  
-Login: `admin` / `admin`
-
-### Bước 5 — Tạo Dashboard (nếu chưa tự tạo)
-
+### 4. Bật Scheduler tự động chạy mỗi ngày lúc 08:00
 ```bash
-docker exec vietnam_news_superset \
-  python /app/pythonpath/build_news_dashboard.py
-```
-
-### Bước 6 — Bật Scheduler tự động hằng ngày
-
-```bash
-# Giữ cửa sổ terminal mở, pipeline tự chạy lúc 08:00 mỗi ngày
 python news_pipeline/scheduler.py
 ```
-
----
-
-## 📊 Dashboard Superset
-
-Dashboard **"🗞️ Vietnam News Intelligence"** gồm 6 charts:
-
-| # | Chart | Loại | Dataset |
-|---|---|---|---|
-| 1 | Xu hướng tin tức theo ngày | Line Chart | `news_daily_summary` |
-| 2 | Top nguồn báo phổ biến | Bar Chart | `news_source_ranking` |
-| 3 | Phân bố cảm xúc | Pie Chart | `news_sentiment_breakdown` |
-| 4 | Điểm cảm xúc theo nguồn | Bar Chart | `news_source_ranking` |
-| 5 | Tổng số bài báo | Big Number | `news_vietnam_articles` |
-| 6 | Danh sách tin mới nhất | Table | `news_full_view` |
-
----
-
-## 🗄️ Schema Cơ Sở Dữ Liệu
-
-Bảng `news_vietnam_articles`:
-
-| Cột | Kiểu | Mô tả |
-|---|---|---|
-| `id` | INTEGER PK | Auto increment |
-| `title` | TEXT | Tiêu đề bài báo |
-| `description` | TEXT | Mô tả ngắn |
-| `content` | TEXT | Nội dung (200 ký tự, free tier) |
-| `url` | TEXT UNIQUE | Đường dẫn gốc (deduplication key) |
-| `source_name` | TEXT | Tên nguồn báo |
-| `author` | TEXT | Tác giả |
-| `published_at` | DATETIME | Ngày xuất bản |
-| `collected_at` | DATETIME | Ngày thu thập |
-| `sentiment_label` | TEXT | Positive / Negative / Neutral |
-| `sentiment_score` | REAL | -1.0 đến +1.0 |
-| `entities_org` | TEXT (JSON) | Danh sách tổ chức/công ty |
-| `entities_gpe` | TEXT (JSON) | Danh sách địa danh |
-| `entities_person` | TEXT (JSON) | Danh sách nhân vật |
-
----
-
-## 🔧 Kiến Trúc ETL
-
-```
-NewsAPI
-  │  (HTTP GET /v2/everything?q=Vietnam)
-  ▼
-collect_news.py  ──── fetch + normalize
-  │
-  ▼
-transform_news.py ─── clean HTML + Sentiment (TextBlob) + NER (spaCy)
-  │
-  ▼
-store_news.py ──────── INSERT OR IGNORE → vietnam_news.db (SQLite)
-  │
-  ▼
-Apache Superset ────── Datasets → Charts → Dashboard
-```
-
----
-
-## 📌 Lưu Ý
-
-- **NewsAPI Free Tier:** giới hạn 100 requests/ngày, content bị cắt ~200 ký tự.
-- **spaCy Model:** cần download `en_core_web_sm` trước khi chạy NER.
-- **Deduplication:** URL được dùng làm UNIQUE KEY, an toàn khi chạy lại nhiều lần.
-- **Superset:** lần đầu khởi động mất 2-3 phút để initialize.
