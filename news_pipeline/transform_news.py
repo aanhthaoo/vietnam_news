@@ -25,6 +25,7 @@ try:
     from ai_models.vietnam_relevance import calculate_vietnam_relevance
     from ai_models.topic_classifier import classify_news_topic
     from ai_models.text_summarizer import summarize_article
+    from ai_models.tfidf_keywords import extract_keywords_from_text
 except ImportError:
     from pathlib import Path
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -32,6 +33,7 @@ except ImportError:
     from ai_models.vietnam_relevance import calculate_vietnam_relevance
     from ai_models.topic_classifier import classify_news_topic
     from ai_models.text_summarizer import summarize_article
+    from ai_models.tfidf_keywords import extract_keywords_from_text
 
 logger = logging.getLogger(__name__)
 
@@ -271,6 +273,14 @@ def transform_article(article: dict) -> dict:
     article["entities_gpe"]    = gpes
     article["entities_person"] = persons
 
+    # 8. TF-IDF Keywords (Người 1)
+    try:
+        headline_and_body = f"{article.get('title', '')} {text}"
+        article["keywords"] = extract_keywords_from_text(headline_and_body, top_n=5)
+    except Exception as e:
+        logger.warning(f"[Transform] Lỗi Keyword Extraction: {e}")
+        article["keywords"] = []
+
     return article
 
 
@@ -304,6 +314,7 @@ def transform_articles(articles: list[dict], verbose: bool = True) -> list[dict]
             article.setdefault("entities_org",    [])
             article.setdefault("entities_gpe",    [])
             article.setdefault("entities_person", [])
+            article.setdefault("keywords",        [])
             enriched.append(article)
 
     if verbose and enriched:

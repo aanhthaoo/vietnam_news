@@ -95,7 +95,7 @@ def run_pipeline(
     save_result = save_articles(enriched)
 
     # ── BƯỚC 5: Dự báo số lượng tin tức (LinearRegression) ───────────────────────
-    print(f"\n[STEP 5/5] 📈 Chạy mô hình Dự báo LinearRegression (7 ngày tới)...")
+    print(f"\n[STEP 5/6] 📈 Chạy mô hình Dự báo LinearRegression (7 ngày tới)...")
     try:
         from ai_models.volume_forecaster import train_and_forecast_volume
         forecast_res = train_and_forecast_volume(horizon_days=7)
@@ -103,6 +103,42 @@ def run_pipeline(
         print(f"   - Đã lưu {len(forecast_res.get('forecasts', []))} bản ghi dự báo vào bảng news_volume_forecast.")
     except Exception as e:
         logger.warning(f"[PIPELINE] Lỗi dự báo: {e}")
+
+    # ── BƯỚC 6: Chạy 4 Module AI Sáng tạo & Phân tích Chuyên sâu (Người 1) ──────
+    print(f"\n[STEP 6/6] 🤖 Chạy các Module AI Sáng tạo Nâng cao...")
+    # 6.1 TF-IDF Keyword Trends
+    try:
+        from ai_models.tfidf_keywords import analyze_and_update_keyword_trends
+        kw_res = analyze_and_update_keyword_trends()
+        print(f"   - TF-IDF Keywords: Đã phân tích {kw_res.get('total_keywords', 0)} từ khóa ({kw_res.get('rising_count', 0)} Rising, {kw_res.get('falling_count', 0)} Falling).")
+    except Exception as e:
+        logger.warning(f"[PIPELINE] Lỗi Keyword Trends: {e}")
+
+    # 6.2 Deduplication / Story Clustering
+    try:
+        from ai_models.deduplicator import cluster_and_update_db
+        cluster_res = cluster_and_update_db(similarity_threshold=0.65)
+        print(f"   - Story Clustering: Đã gom {cluster_res.get('total_articles', 0)} bài thành {cluster_res.get('total_clusters', 0)} cụm ({cluster_res.get('multi_article_clusters', 0)} sự kiện lan tỏa đa nguồn).")
+    except Exception as e:
+        logger.warning(f"[PIPELINE] Lỗi Story Clustering: {e}")
+
+    # 6.3 Breaking News Spike Alert
+    try:
+        from ai_models.breaking_news import get_latest_breaking_alert
+        spike_alert = get_latest_breaking_alert()
+        status_icon = "🚨 TIN NÓNG" if spike_alert.get("is_breaking_news") else "✅ Bình thường"
+        print(f"   - Breaking News Alert: {status_icon} (Z-Score={spike_alert.get('z_score', 0.0)}) -> {spike_alert.get('spike_reason', '')[:65]}...")
+    except Exception as e:
+        logger.warning(f"[PIPELINE] Lỗi Breaking News: {e}")
+
+    # 6.4 Source Credibility Evaluation
+    try:
+        from ai_models.source_credibility import get_top_credible_sources
+        top_sources = get_top_credible_sources(top_n=3)
+        top_names = [f"{s['source_name']} ({s['credibility_score']}đ)" for s in top_sources]
+        print(f"   - Source Credibility: Top 3 nguồn uy tín: {', '.join(top_names)}")
+    except Exception as e:
+        logger.warning(f"[PIPELINE] Lỗi Source Credibility: {e}")
 
     # ── Tổng kết ─────────────────────────────────────────────────────────────
     elapsed = (datetime.now() - start_time).total_seconds()

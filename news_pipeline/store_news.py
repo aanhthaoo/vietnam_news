@@ -83,7 +83,9 @@ def create_table() -> None:
             topic_label             VARCHAR(100) DEFAULT 'General',
             topic_confidence        NUMERIC(8,4) DEFAULT 0.0,
             ai_summary              TEXT,
-            word_count              INTEGER DEFAULT 0
+            word_count              INTEGER DEFAULT 0,
+            keywords                TEXT,
+            story_cluster_id        INTEGER DEFAULT 0
         );
         """
         ddl_forecast_table = """
@@ -95,6 +97,18 @@ def create_table() -> None:
             upper_bound     NUMERIC(8,2),
             model_type      VARCHAR(100),
             created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """
+        ddl_keyword_trends_table = """
+        CREATE TABLE IF NOT EXISTS news_keyword_trends (
+            id              SERIAL PRIMARY KEY,
+            date_str        VARCHAR(50),
+            keyword         VARCHAR(255),
+            frequency       INTEGER DEFAULT 1,
+            trend_direction VARCHAR(50) DEFAULT 'Stable',
+            trend_delta     NUMERIC(8,2) DEFAULT 0.0,
+            created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(date_str, keyword)
         );
         """
         ddl_migrations = [
@@ -109,6 +123,8 @@ def create_table() -> None:
             "ALTER TABLE news_vietnam_articles ADD COLUMN IF NOT EXISTS topic_confidence NUMERIC(8,4) DEFAULT 0.0;",
             "ALTER TABLE news_vietnam_articles ADD COLUMN IF NOT EXISTS ai_summary TEXT;",
             "ALTER TABLE news_vietnam_articles ADD COLUMN IF NOT EXISTS word_count INTEGER DEFAULT 0;",
+            "ALTER TABLE news_vietnam_articles ADD COLUMN IF NOT EXISTS keywords TEXT;",
+            "ALTER TABLE news_vietnam_articles ADD COLUMN IF NOT EXISTS story_cluster_id INTEGER DEFAULT 0;",
         ]
         ddl_indexes = [
             "CREATE INDEX IF NOT EXISTS idx_news_published_at ON news_vietnam_articles(published_at);",
@@ -118,12 +134,48 @@ def create_table() -> None:
             "CREATE INDEX IF NOT EXISTS idx_news_topic        ON news_vietnam_articles(topic_label);",
             "CREATE INDEX IF NOT EXISTS idx_news_vn_relevant  ON news_vietnam_articles(is_vietnam_relevant);",
             "CREATE INDEX IF NOT EXISTS idx_news_ensemble     ON news_vietnam_articles(ensemble_sentiment_label);",
+            "CREATE INDEX IF NOT EXISTS idx_news_cluster      ON news_vietnam_articles(story_cluster_id);",
         ]
         ddl_views = [
             "CREATE OR REPLACE VIEW news_articles AS SELECT * FROM news_vietnam_articles;",
             "CREATE OR REPLACE VIEW vw_vietnam_relevant AS SELECT * FROM news_vietnam_articles WHERE is_vietnam_relevant = 1;",
             "CREATE OR REPLACE VIEW vw_topic_summary AS SELECT topic_label, COUNT(*) AS article_count, ROUND(AVG(COALESCE(sentiment_score, 0)), 4) AS avg_sentiment FROM news_vietnam_articles GROUP BY topic_label;",
             "CREATE OR REPLACE VIEW vw_sentiment_ensemble AS SELECT ensemble_sentiment_label, COUNT(*) AS count FROM news_vietnam_articles GROUP BY ensemble_sentiment_label;",
+            """
+            CREATE OR REPLACE VIEW vw_story_clusters AS
+            SELECT 
+                story_cluster_id,
+                MIN(title) AS lead_title,
+                COUNT(*) AS article_count,
+                COUNT(DISTINCT source_name) AS unique_sources,
+                MIN(published_at) AS first_published,
+                MAX(published_at) AS last_published,
+                MAX(topic_label) AS main_topic,
+                MAX(ensemble_sentiment_label) AS dominant_sentiment
+            FROM news_vietnam_articles
+            WHERE story_cluster_id IS NOT NULL AND story_cluster_id > 0
+            GROUP BY story_cluster_id
+            ORDER BY article_count DESC;
+            """,
+            """
+            CREATE OR REPLACE VIEW vw_source_credibility AS
+            SELECT 
+                source_name,
+                COUNT(*) AS total_articles,
+                ROUND(AVG(COALESCE(word_count, 0))::numeric, 1) AS avg_word_count,
+                ROUND((AVG(CASE WHEN is_vietnam_relevant = 1 THEN 1.0 ELSE 0.0 END) * 100)::numeric, 1) AS vn_relevance_pct,
+                ROUND(AVG(COALESCE(sentiment_score, 0))::numeric, 3) AS avg_sentiment,
+                ROUND(
+                    LEAST(100.0, GREATEST(10.0,
+                        (CASE WHEN COUNT(*) >= 5 THEN 30.0 ELSE COUNT(*) * 6.0 END) +
+                        (AVG(CASE WHEN is_vietnam_relevant = 1 THEN 1.0 ELSE 0.0 END) * 35.0) +
+                        (LEAST(AVG(COALESCE(word_count, 0)) / 20.0, 35.0))
+                    ))::numeric, 1
+                ) AS credibility_score
+            FROM news_vietnam_articles
+            WHERE source_name IS NOT NULL AND source_name != ''
+            GROUP BY source_name;
+            """
         ]
         conn = get_pg_connection()
         conn.autocommit = True
@@ -131,6 +183,7 @@ def create_table() -> None:
             with conn.cursor() as cur:
                 cur.execute(ddl_table)
                 cur.execute(ddl_forecast_table)
+                cur.execute(ddl_keyword_trends_table)
                 for mig_sql in ddl_migrations:
                     try:
                         cur.execute(mig_sql)
@@ -148,7 +201,7 @@ def create_table() -> None:
                         pass
         finally:
             conn.close()
-        print("[DB] [OK] PostgreSQL Schema, Forecast Table & Views ready.")
+        print("[DB] [OK] PostgreSQL Schema, Tables & Views ready.")
 
     # Luôn đồng bộ SQLite (fallback và phục vụ kiểm định dữ liệu Người 5)
     try:
@@ -176,7 +229,9 @@ def create_table() -> None:
             topic_label             TEXT DEFAULT 'General',
             topic_confidence        REAL DEFAULT 0.0,
             ai_summary              TEXT,
-            word_count              INTEGER DEFAULT 0
+            word_count              INTEGER DEFAULT 0,
+            keywords                TEXT,
+            story_cluster_id        INTEGER DEFAULT 0
         );
         """
         ddl_forecast_table = """
@@ -190,6 +245,18 @@ def create_table() -> None:
             created_at      TEXT
         );
         """
+        ddl_keyword_trends_table = """
+        CREATE TABLE IF NOT EXISTS news_keyword_trends (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            date_str        TEXT,
+            keyword         TEXT,
+            frequency       INTEGER DEFAULT 1,
+            trend_direction TEXT DEFAULT 'Stable',
+            trend_delta     REAL DEFAULT 0.0,
+            created_at      TEXT DEFAULT (datetime('now','localtime')),
+            UNIQUE(date_str, keyword)
+        );
+        """
         ddl_indexes = [
             "CREATE INDEX IF NOT EXISTS idx_news_published_at  ON news_vietnam_articles(published_at);",
             "CREATE INDEX IF NOT EXISTS idx_news_source_name   ON news_vietnam_articles(source_name);",
@@ -198,16 +265,53 @@ def create_table() -> None:
             "CREATE INDEX IF NOT EXISTS idx_news_topic         ON news_vietnam_articles(topic_label);",
             "CREATE INDEX IF NOT EXISTS idx_news_vn_relevant   ON news_vietnam_articles(is_vietnam_relevant);",
             "CREATE INDEX IF NOT EXISTS idx_news_ensemble      ON news_vietnam_articles(ensemble_sentiment_label);",
+            "CREATE INDEX IF NOT EXISTS idx_news_cluster       ON news_vietnam_articles(story_cluster_id);",
         ]
         views = [
             "CREATE VIEW IF NOT EXISTS news_articles AS SELECT * FROM news_vietnam_articles;",
             "CREATE VIEW IF NOT EXISTS vw_vietnam_relevant AS SELECT * FROM news_vietnam_articles WHERE is_vietnam_relevant = 1;",
             "CREATE VIEW IF NOT EXISTS vw_topic_summary AS SELECT topic_label, COUNT(*) AS article_count, ROUND(AVG(COALESCE(sentiment_score, 0)), 4) AS avg_sentiment FROM news_vietnam_articles GROUP BY topic_label;",
             "CREATE VIEW IF NOT EXISTS vw_sentiment_ensemble AS SELECT ensemble_sentiment_label, COUNT(*) AS count FROM news_vietnam_articles GROUP BY ensemble_sentiment_label;",
+            """
+            CREATE VIEW IF NOT EXISTS vw_story_clusters AS
+            SELECT 
+                story_cluster_id,
+                MIN(title) AS lead_title,
+                COUNT(*) AS article_count,
+                COUNT(DISTINCT source_name) AS unique_sources,
+                MIN(published_at) AS first_published,
+                MAX(published_at) AS last_published,
+                MAX(topic_label) AS main_topic,
+                MAX(ensemble_sentiment_label) AS dominant_sentiment
+            FROM news_vietnam_articles
+            WHERE story_cluster_id IS NOT NULL AND story_cluster_id > 0
+            GROUP BY story_cluster_id
+            ORDER BY article_count DESC;
+            """,
+            """
+            CREATE VIEW IF NOT EXISTS vw_source_credibility AS
+            SELECT 
+                source_name,
+                COUNT(*) AS total_articles,
+                ROUND(AVG(COALESCE(word_count, 0)), 1) AS avg_word_count,
+                ROUND(AVG(CASE WHEN is_vietnam_relevant = 1 THEN 1.0 ELSE 0.0 END) * 100.0, 1) AS vn_relevance_pct,
+                ROUND(AVG(COALESCE(sentiment_score, 0)), 3) AS avg_sentiment,
+                ROUND(
+                    MIN(100.0, MAX(10.0,
+                        (CASE WHEN COUNT(*) >= 5 THEN 30.0 ELSE COUNT(*) * 6.0 END) +
+                        (AVG(CASE WHEN is_vietnam_relevant = 1 THEN 1.0 ELSE 0.0 END) * 35.0) +
+                        (MIN(AVG(COALESCE(word_count, 0)) / 20.0, 35.0))
+                    )), 1
+                ) AS credibility_score
+            FROM news_vietnam_articles
+            WHERE source_name IS NOT NULL AND source_name != ''
+            GROUP BY source_name;
+            """
         ]
         with get_sqlite_connection() as conn:
             conn.execute(ddl_table)
             conn.execute(ddl_forecast_table)
+            conn.execute(ddl_keyword_trends_table)
             cursor = conn.cursor()
             cursor.execute("PRAGMA table_info(news_vietnam_articles);")
             existing_cols = {row[1] for row in cursor.fetchall()}
@@ -221,6 +325,8 @@ def create_table() -> None:
                 ("topic_confidence", "REAL DEFAULT 0.0"),
                 ("ai_summary", "TEXT"),
                 ("word_count", "INTEGER DEFAULT 0"),
+                ("keywords", "TEXT"),
+                ("story_cluster_id", "INTEGER DEFAULT 0"),
             ]
             for col_name, col_def in new_cols:
                 if col_name not in existing_cols:
@@ -236,7 +342,7 @@ def create_table() -> None:
                 except Exception:
                     pass
             conn.commit()
-        print(f"[DB] [OK] SQLite Schema, Forecast Table & Views ready: {DB_PATH}")
+        print(f"[DB] [OK] SQLite Schema, Tables & Views ready: {DB_PATH}")
     except Exception as e:
         logger.warning(f"[DB] Không thể khởi tạo SQLite: {e}")
 
@@ -256,9 +362,10 @@ def save_articles(articles: list[dict]) -> dict:
              entities_org, entities_gpe, entities_person,
              vader_compound, vader_label, ensemble_sentiment_label,
              vietnam_relevance_score, is_vietnam_relevant,
-             topic_label, topic_confidence, ai_summary, word_count)
+             topic_label, topic_confidence, ai_summary, word_count,
+             keywords, story_cluster_id)
         VALUES
-            (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (url) DO UPDATE SET
             vader_compound          = EXCLUDED.vader_compound,
             vader_label             = EXCLUDED.vader_label,
@@ -268,11 +375,15 @@ def save_articles(articles: list[dict]) -> dict:
             topic_label             = EXCLUDED.topic_label,
             topic_confidence        = EXCLUDED.topic_confidence,
             ai_summary              = EXCLUDED.ai_summary,
-            word_count              = EXCLUDED.word_count;
+            word_count              = EXCLUDED.word_count,
+            keywords                = EXCLUDED.keywords,
+            story_cluster_id        = EXCLUDED.story_cluster_id;
         """
         with get_pg_connection() as conn:
             with conn.cursor() as cur:
                 for article in articles:
+                    kw = article.get("keywords")
+                    kw_str = json.dumps(kw, ensure_ascii=False) if isinstance(kw, list) else (kw or "")
                     vals = (
                         (article.get("title") or "Untitled")[:1000],
                         article.get("description") or "",
@@ -295,6 +406,8 @@ def save_articles(articles: list[dict]) -> dict:
                         article.get("topic_confidence", 0.0),
                         article.get("ai_summary", ""),
                         article.get("word_count", 0),
+                        kw_str,
+                        article.get("story_cluster_id", 0),
                     )
                     cur.execute(sql, vals)
                     if cur.rowcount > 0:
@@ -311,14 +424,16 @@ def save_articles(articles: list[dict]) -> dict:
              entities_org, entities_gpe, entities_person,
              vader_compound, vader_label, ensemble_sentiment_label,
              vietnam_relevance_score, is_vietnam_relevant,
-             topic_label, topic_confidence, ai_summary, word_count)
+             topic_label, topic_confidence, ai_summary, word_count,
+             keywords, story_cluster_id)
         VALUES
             (:title, :description, :content, :url, :source_name, :author,
              :published_at, :sentiment_label, :sentiment_score,
              :entities_org, :entities_gpe, :entities_person,
              :vader_compound, :vader_label, :ensemble_sentiment_label,
              :vietnam_relevance_score, :is_vietnam_relevant,
-             :topic_label, :topic_confidence, :ai_summary, :word_count)
+             :topic_label, :topic_confidence, :ai_summary, :word_count,
+             :keywords, :story_cluster_id)
         ON CONFLICT(url) DO UPDATE SET
             sentiment_label         = excluded.sentiment_label,
             sentiment_score         = excluded.sentiment_score,
@@ -330,10 +445,14 @@ def save_articles(articles: list[dict]) -> dict:
             topic_label             = excluded.topic_label,
             topic_confidence        = excluded.topic_confidence,
             ai_summary              = excluded.ai_summary,
-            word_count              = excluded.word_count;
+            word_count              = excluded.word_count,
+            keywords                = excluded.keywords,
+            story_cluster_id        = excluded.story_cluster_id;
         """
         with get_sqlite_connection() as conn:
             for article in articles:
+                kw = article.get("keywords")
+                kw_str = json.dumps(kw, ensure_ascii=False) if isinstance(kw, list) else (kw or "")
                 row = {
                     "title":                   (article.get("title") or "Untitled")[:1000],
                     "description":             article.get("description") or "",
@@ -356,6 +475,8 @@ def save_articles(articles: list[dict]) -> dict:
                     "topic_confidence":        article.get("topic_confidence", 0.0),
                     "ai_summary":              article.get("ai_summary") or "",
                     "word_count":              article.get("word_count", 0),
+                    "keywords":                kw_str,
+                    "story_cluster_id":        article.get("story_cluster_id", 0),
                 }
                 cursor = conn.execute(sql, row)
                 if cursor.rowcount > 0:

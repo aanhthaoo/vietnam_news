@@ -245,6 +245,54 @@ with app.app_context():
     )
     if c8: charts.append(c8)
 
+    # Chart 9: Table — Đánh giá Độ uy tín Nguồn báo (Source Credibility Ranking)
+    c9 = create_or_update_chart(
+        chart_name="⭐ Xếp hạng Độ uy tín Nguồn báo Quốc tế (Source Credibility)",
+        viz_type="table",
+        dataset_name="news_source_credibility",
+        params={
+            "viz_type":       "table",
+            "all_columns":    ["source_name", "credibility_score", "vn_relevance_pct", "avg_word_count", "total_articles"],
+            "order_by_cols":  ["[\"credibility_score\", false]"],
+            "row_limit":      25,
+            "page_length":    10,
+            "include_search": True,
+        }
+    )
+    if c9: charts.append(c9)
+
+    # Chart 10: Table — Gom cụm Sự kiện Truyền thông (Story Clusters & Media Coverage)
+    c10 = create_or_update_chart(
+        chart_name="🌐 Gom cụm Sự kiện & Độ phủ Truyền thông (Story Clusters)",
+        viz_type="table",
+        dataset_name="news_story_clusters",
+        params={
+            "viz_type":       "table",
+            "all_columns":    ["lead_title", "article_count", "unique_sources", "main_topic", "dominant_sentiment"],
+            "order_by_cols":  ["[\"article_count\", false]"],
+            "row_limit":      20,
+            "page_length":    10,
+            "include_search": True,
+        }
+    )
+    if c10: charts.append(c10)
+
+    # Chart 11: Table — Xu hướng Từ khóa Nổi bật (Rising / Falling Keywords)
+    c11 = create_or_update_chart(
+        chart_name="⚡ Xu hướng Từ khóa Nổi bật & Biến động (TF-IDF Trends)",
+        viz_type="table",
+        dataset_name="news_keyword_trends",
+        params={
+            "viz_type":       "table",
+            "all_columns":    ["keyword", "frequency", "trend_direction", "trend_delta", "date_str"],
+            "order_by_cols":  ["[\"frequency\", false]"],
+            "row_limit":      30,
+            "page_length":    10,
+            "include_search": True,
+        }
+    )
+    if c11: charts.append(c11)
+
     # ── Tạo Dashboard Layout ──────────────────────────────────────────────────
     print("\n[DASHBOARD] Đang thiết kế cấu trúc Dashboard Grid...")
 
@@ -254,7 +302,7 @@ with app.app_context():
         "GRID_ID": {
             "type": "GRID",
             "id": "GRID_ID",
-            "children": ["ROW-1", "ROW-2", "ROW-3", "ROW-4"],
+            "children": ["ROW-1", "ROW-2", "ROW-3", "ROW-4", "ROW-5", "ROW-6"],
             "parents": ["ROOT_ID"],
         },
         "ROW-1": {
@@ -285,17 +333,34 @@ with app.app_context():
             "parents": ["ROOT_ID", "GRID_ID"],
             "meta": {"background": "BACKGROUND_TRANSPARENT"},
         },
+        "ROW-5": {
+            "type": "ROW",
+            "id": "ROW-5",
+            "children": ["CHART-9", "CHART-10"],
+            "parents": ["ROOT_ID", "GRID_ID"],
+            "meta": {"background": "BACKGROUND_TRANSPARENT"},
+        },
+        "ROW-6": {
+            "type": "ROW",
+            "id": "ROW-6",
+            "children": ["CHART-11"],
+            "parents": ["ROOT_ID", "GRID_ID"],
+            "meta": {"background": "BACKGROUND_TRANSPARENT"},
+        },
     }
 
     chart_layout = [
-        ("CHART-1", c1, 4, "ROW-1"),  # Big number
-        ("CHART-2", c2, 4, "ROW-1"),  # VN Relevance Donut
-        ("CHART-3", c3, 4, "ROW-1"),  # Ensemble Sentiment Donut
-        ("CHART-4", c4, 6, "ROW-2"),  # 8 Topics Bar
-        ("CHART-5", c5, 6, "ROW-2"),  # Linear Regression Forecast
-        ("CHART-6", c6, 6, "ROW-3"),  # Top sources
-        ("CHART-7", c7, 6, "ROW-3"),  # Word cloud
-        ("CHART-8", c8, 12, "ROW-4"), # AI Summary Table
+        ("CHART-1",  c1,  4,  "ROW-1"),  # Big number
+        ("CHART-2",  c2,  4,  "ROW-1"),  # VN Relevance Donut
+        ("CHART-3",  c3,  4,  "ROW-1"),  # Ensemble Sentiment Donut
+        ("CHART-4",  c4,  6,  "ROW-2"),  # 8 Topics Bar
+        ("CHART-5",  c5,  6,  "ROW-2"),  # Linear Regression Forecast
+        ("CHART-6",  c6,  6,  "ROW-3"),  # Top sources
+        ("CHART-7",  c7,  6,  "ROW-3"),  # Word cloud
+        ("CHART-8",  c8,  12, "ROW-4"),  # AI Summary Table
+        ("CHART-9",  c9,  6,  "ROW-5"),  # Source Credibility Ranking
+        ("CHART-10", c10, 6,  "ROW-5"),  # Story Clusters
+        ("CHART-11", c11, 12, "ROW-6"),  # Keyword Trends
     ]
 
     for chart_key, chart_obj, width, parent_row in chart_layout:

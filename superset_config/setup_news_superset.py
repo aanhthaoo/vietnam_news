@@ -230,6 +230,50 @@ ORDER BY published_at DESC
 LIMIT 100
             """.strip(),
         },
+        {
+            "name": "news_keyword_trends",
+            "sql": """
+SELECT 
+    id,
+    date_str,
+    keyword,
+    frequency,
+    trend_direction,
+    trend_delta
+FROM news_keyword_trends
+ORDER BY frequency DESC
+            """.strip(),
+        },
+        {
+            "name": "news_source_credibility",
+            "sql": """
+SELECT 
+    source_name,
+    total_articles,
+    avg_word_count,
+    vn_relevance_pct,
+    avg_sentiment,
+    credibility_score
+FROM vw_source_credibility
+ORDER BY credibility_score DESC
+            """.strip(),
+        },
+        {
+            "name": "news_story_clusters",
+            "sql": """
+SELECT 
+    story_cluster_id,
+    lead_title,
+    article_count,
+    unique_sources,
+    first_published,
+    last_published,
+    main_topic,
+    dominant_sentiment
+FROM vw_story_clusters
+ORDER BY article_count DESC
+            """.strip(),
+        },
     ]
 
     for vd in virtual_datasets:
