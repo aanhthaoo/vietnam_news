@@ -268,28 +268,21 @@ with app.app_context():
     )
     if c9: charts.append(c9)
 
-    # Chart 10: Horizontal Bar Chart — Gom cụm Sự kiện Truyền thông (Story Clusters & Media Coverage)
+    # Chart 10: Treemap — Bản đồ Nhiệt Cụm Sự kiện & Độ phủ Truyền thông (Story Clusters Treemap)
     c10 = create_or_update_chart(
-        chart_name="🌐 Gom cụm Sự kiện & Độ phủ Truyền thông (Story Clusters)",
-        viz_type="echarts_timeseries_bar",
+        chart_name="🌐 Bản đồ Nhiệt Cụm Sự kiện & Độ phủ Truyền thông (Story Clusters Treemap)",
+        viz_type="treemap",
         dataset_name="news_story_clusters",
         params={
-            "viz_type":       "echarts_timeseries_bar",
-            "x_axis":         "lead_title",
-            "time_range":     "No filter",
-            "metrics":        [
-                {"expressionType": "SIMPLE", "column": {"column_name": "unique_sources"}, "aggregate": "MAX", "label": "Số nguồn báo đưa tin"},
-                {"expressionType": "SIMPLE", "column": {"column_name": "article_count"}, "aggregate": "MAX", "label": "Tổng số bài viết"}
-            ],
-            "groupby":        [],
-            "row_limit":      10,
-            "order_desc":     True,
-            "orientation":    "horizontal",
-            "show_legend":    True,
-            "rich_tooltip":   True,
-            "x_axis_title":   "Độ phủ truyền thông (Nguồn / Bài)",
-            "y_axis_title":   "Sự kiện tiêu biểu",
+            "viz_type":       "treemap",
+            "metric":         {"expressionType": "SIMPLE", "column": {"column_name": "article_count"}, "aggregate": "SUM", "label": "Số bài viết"},
+            "metrics":        [{"expressionType": "SIMPLE", "column": {"column_name": "article_count"}, "aggregate": "SUM", "label": "Số bài viết"}],
+            "groupby":        ["main_topic", "lead_title"],
+            "row_limit":      40,
             "color_scheme":   "supersetColors",
+            "treemap_ratio":  1.618,
+            "number_format":  "SMART_NUMBER",
+            "rich_tooltip":   True,
         }
     )
     if c10: charts.append(c10)
