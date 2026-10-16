@@ -2,19 +2,19 @@
 ai_models/topic_classifier.py
 =============================
 Phụ trách: Thành viên 3 (Junior Developer)
-Trạng thái: Template khung sườn (Chờ Thành viên 3 hiện thực logic)
+Trạng thái: ✅ Đã hoàn thành
 
-YÊU CẦU ĐẶT RA:
-1. Xây dựng bộ quy tắc từ điển từ khóa TOPIC_RULES cho 8 chủ đề chính:
-   - Economy (Kinh tế)
-   - Politics (Chính trị)
-   - Society (Xã hội)
-   - Technology (Công nghệ)
-   - Military (Quân sự - An ninh)
-   - Environment (Môi trường)
-   - Healthcare (Y tế)
-   - Sports (Thể thao)
-2. Hiện thực hàm `classify_news_topic`:
+YÊU CẦU ĐÃ THỰC HIỆN:
+1. ✅ Xây dựng bộ quy tắc từ điển từ khóa TOPIC_RULES cho 8 chủ đề chính:
+   - Economy (Kinh tế) - 36 từ khóa
+   - Politics (Chính trị) - 33 từ khóa
+   - Society (Xã hội) - 32 từ khóa
+   - Technology (Công nghệ) - 35 từ khóa
+   - Military (Quân sự - An ninh) - 34 từ khóa
+   - Environment (Môi trường) - 33 từ khóa
+   - Healthcare (Y tế) - 34 từ khóa
+   - Sports (Thể thao) - 34 từ khóa
+2. ✅ Hiện thực hàm `classify_news_topic`:
    - Quét tần suất từ khóa của từng chủ đề xuất hiện trong tiêu đề/nội dung
    - Xác định chủ đề có điểm số cao nhất
    - Tính độ tin cậy (confidence score)
@@ -33,7 +33,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 
 # ==============================================================================
-# TODO 1 (Thành viên 3): Xây dựng bộ từ điển từ khóa tiếng Anh cho 8 chủ đề
+# ✅ TODO 1 (Thành viên 3): Đã hoàn thành - Bộ từ điển từ khóa tiếng Anh cho 8 chủ đề
 # ==============================================================================
 TOPIC_RULES = {
     "Economy": [
@@ -129,13 +129,13 @@ def classify_news_topic(title: str, content: str) -> Dict[str, Any]:
         topic_scores (dict): Điểm chi tiết của từng chủ đề
     """
     # ==========================================================================
-    # TODO 2 (Thành viên 3): Hiện thực thuật toán duyệt từ khóa và tính điểm chủ đề
-    # Gợi ý các bước:
-    #   1. Chuẩn hóa chuỗi văn bản về chữ thường (lowercase)
-    #   2. Khởi tạo bảng điểm cho 8 chủ đề
-    #   3. Lặp qua các từ khóa trong TOPIC_RULES để đếm điểm
-    #   4. Tìm chủ đề có điểm cao nhất
-    #   5. Tính tỷ lệ độ tin cậy (confidence)
+    # ✅ TODO 2 (Thành viên 3): Đã hoàn thành - Thuật toán duyệt từ khóa và tính điểm chủ đề
+    # Các bước đã thực hiện:
+    #   1. ✅ Chuẩn hóa chuỗi văn bản về chữ thường (lowercase)
+    #   2. ✅ Khởi tạo bảng điểm cho 8 chủ đề
+    #   3. ✅ Lặp qua các từ khóa trong TOPIC_RULES để đếm điểm
+    #   4. ✅ Tìm chủ đề có điểm cao nhất
+    #   5. ✅ Tính tỷ lệ độ tin cậy (confidence)
     # ==========================================================================
 
     # 1. Chuẩn hóa văn bản về chữ thường
