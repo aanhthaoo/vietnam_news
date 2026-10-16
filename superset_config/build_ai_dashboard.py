@@ -268,21 +268,21 @@ with app.app_context():
     )
     if c9: charts.append(c9)
 
-    # Chart 10: Treemap — Bản đồ Nhiệt Cụm Sự kiện & Độ phủ Truyền thông (Story Clusters Treemap)
+    # Chart 10: Treemap v2 — Bản đồ Nhiệt Cụm Sự kiện & Độ phủ Truyền thông (Story Clusters Treemap)
     c10 = create_or_update_chart(
         chart_name="🌐 Bản đồ Nhiệt Cụm Sự kiện & Độ phủ Truyền thông (Story Clusters Treemap)",
-        viz_type="treemap",
+        viz_type="treemap_v2",
         dataset_name="news_story_clusters",
         params={
-            "viz_type":       "treemap",
-            "metric":         {"expressionType": "SIMPLE", "column": {"column_name": "article_count"}, "aggregate": "SUM", "label": "Số bài viết"},
-            "metrics":        [{"expressionType": "SIMPLE", "column": {"column_name": "article_count"}, "aggregate": "SUM", "label": "Số bài viết"}],
-            "groupby":        ["main_topic", "lead_title"],
-            "row_limit":      40,
-            "color_scheme":   "supersetColors",
-            "treemap_ratio":  1.618,
-            "number_format":  "SMART_NUMBER",
-            "rich_tooltip":   True,
+            "viz_type":          "treemap_v2",
+            "metric":            {"expressionType": "SIMPLE", "column": {"column_name": "article_count"}, "aggregate": "SUM", "label": "Số bài viết"},
+            "groupby":           ["main_topic", "lead_title"],
+            "row_limit":         50,
+            "label_type":        "key_value",
+            "number_format":     "SMART_NUMBER",
+            "show_labels":       True,
+            "show_upper_labels": True,
+            "color_scheme":      "supersetColors",
         }
     )
     if c10: charts.append(c10)
