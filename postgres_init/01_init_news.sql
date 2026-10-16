@@ -1,4 +1,4 @@
-﻿--
+--
 -- PostgreSQL database dump
 --
 
@@ -51,7 +51,8 @@ CREATE TABLE public.news_vietnam_articles (
     ai_summary text,
     word_count integer DEFAULT 0,
     keywords text,
-    story_cluster_id integer DEFAULT 0
+    story_cluster_id integer DEFAULT 0,
+    vn_relevance_status character varying(50) DEFAULT 'Tin ngoài lề / Nhắc lướt'::character varying
 );
 
 
@@ -1602,10 +1603,13 @@ CREATE INDEX idx_news_topic ON public.news_vietnam_articles USING btree (topic_l
 
 CREATE INDEX idx_news_vn_relevant ON public.news_vietnam_articles USING btree (is_vietnam_relevant);
 
+CREATE INDEX idx_news_vn_relevance_status ON public.news_vietnam_articles USING btree (vn_relevance_status);
+
 
 --
 -- PostgreSQL database dump complete
 --
 
 \unrestrict EYc5xQiwaXudR7URV8JLkLTwAgYx6b1wKM0kTEqnIY23YgJHJis5XHWYhYcf4W3
+
 

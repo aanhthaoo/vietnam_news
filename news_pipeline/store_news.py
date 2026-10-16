@@ -125,6 +125,7 @@ def create_table() -> None:
             "ALTER TABLE news_vietnam_articles ADD COLUMN IF NOT EXISTS word_count INTEGER DEFAULT 0;",
             "ALTER TABLE news_vietnam_articles ADD COLUMN IF NOT EXISTS keywords TEXT;",
             "ALTER TABLE news_vietnam_articles ADD COLUMN IF NOT EXISTS story_cluster_id INTEGER DEFAULT 0;",
+            "ALTER TABLE news_vietnam_articles ADD COLUMN IF NOT EXISTS vn_relevance_status VARCHAR(50) DEFAULT 'Tin ngoài lề / Nhắc lướt';",
         ]
         ddl_indexes = [
             "CREATE INDEX IF NOT EXISTS idx_news_published_at ON news_vietnam_articles(published_at);",
@@ -133,6 +134,7 @@ def create_table() -> None:
             "CREATE INDEX IF NOT EXISTS idx_news_collected_at ON news_vietnam_articles(collected_at);",
             "CREATE INDEX IF NOT EXISTS idx_news_topic        ON news_vietnam_articles(topic_label);",
             "CREATE INDEX IF NOT EXISTS idx_news_vn_relevant  ON news_vietnam_articles(is_vietnam_relevant);",
+            "CREATE INDEX IF NOT EXISTS idx_news_vn_status    ON news_vietnam_articles(vn_relevance_status);",
             "CREATE INDEX IF NOT EXISTS idx_news_ensemble     ON news_vietnam_articles(ensemble_sentiment_label);",
             "CREATE INDEX IF NOT EXISTS idx_news_cluster      ON news_vietnam_articles(story_cluster_id);",
         ]

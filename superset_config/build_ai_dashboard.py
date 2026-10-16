@@ -90,8 +90,24 @@ with app.app_context():
     print("\n[AI CHARTS] Đang khởi tạo 8 biểu đồ phân tích AI...")
     charts = []
 
-    # Chart 1: Big Number — Tổng số bài báo
+    # Physical Dataset: news_vietnam_articles
     ds_phys = get_dataset("news_vietnam_articles")
+    if ds_phys:
+        verbose_map = {
+            "title": "Tiêu đề bài báo",
+            "source_name": "Nguồn báo",
+            "topic_label": "Chủ đề AI",
+            "ensemble_sentiment_label": "Cảm xúc AI (Ensemble)",
+            "vn_relevance_status": "Độ chuẩn Việt Nam",
+            "ai_summary": "Tóm tắt AI & Ngữ cảnh VN",
+            "published_at": "Thời gian đăng",
+        }
+        for col in ds_phys.columns:
+            if col.column_name in verbose_map:
+                col.verbose_name = verbose_map[col.column_name]
+        db.session.commit()
+
+    # Chart 1: Big Number — Tổng số bài báo
     c1 = create_or_update_chart(
         chart_name="📰 Tổng số bài báo",
         viz_type="big_number_total",
@@ -105,53 +121,54 @@ with app.app_context():
     )
     if c1: charts.append(c1)
 
-    # Chart 2: Big Number — Tỉ lệ tin chuẩn về Việt Nam
-    ds_rel = get_dataset("news_vietnam_relevance")
+    # Chart 2: Donut Chart — Tỉ lệ tin chuẩn về Việt Nam (Cross-filter emitter)
     c2 = create_or_update_chart(
         chart_name="🇻🇳 Tỉ lệ tin chuẩn Việt Nam",
         viz_type="pie",
-        dataset_name="news_vietnam_relevance",
+        dataset_name="news_vietnam_articles",
         params={
             "viz_type":       "pie",
-            "metric":         {"expressionType": "SIMPLE", "column": {"column_name": "article_count"}, "aggregate": "SUM", "label": "Số bài"},
-            "groupby":        ["status"],
+            "metric":         {"expressionType": "SIMPLE", "column": {"column_name": "id"}, "aggregate": "COUNT", "label": "Số bài"},
+            "groupby":        ["vn_relevance_status"],
             "row_limit":      10,
             "pie_label_type": "key_percent",
             "show_legend":    True,
             "donut":          True,
             "color_scheme":   "supersetColors",
+            "emit_filter":    True,
         }
     )
     if c2: charts.append(c2)
 
-    # Chart 3: Donut Chart — Phân bố cảm xúc Ensemble
+    # Chart 3: Donut Chart — Phân bố cảm xúc Ensemble (Cross-filter emitter)
     c3 = create_or_update_chart(
         chart_name="🎭 Cảm xúc Đa mô hình Ensemble (VADER + TextBlob)",
         viz_type="pie",
-        dataset_name="news_ensemble_sentiment",
+        dataset_name="news_vietnam_articles",
         params={
             "viz_type":       "pie",
-            "metric":         {"expressionType": "SIMPLE", "column": {"column_name": "article_count"}, "aggregate": "SUM", "label": "Số bài"},
+            "metric":         {"expressionType": "SIMPLE", "column": {"column_name": "id"}, "aggregate": "COUNT", "label": "Số bài"},
             "groupby":        ["ensemble_sentiment_label"],
             "row_limit":      10,
             "pie_label_type": "key_percent",
             "show_legend":    True,
             "donut":          True,
             "color_scheme":   "supersetColors",
+            "emit_filter":    True,
         }
     )
     if c3: charts.append(c3)
 
-    # Chart 4: Bar Chart — Phân bố 8 Chủ đề Tin tức
+    # Chart 4: Bar Chart — Phân bố 8 Chủ đề Tin tức (Cross-filter emitter)
     c4 = create_or_update_chart(
         chart_name="🏷️ Phân loại 8 Chủ đề Tin tức (AI Rules)",
         viz_type="echarts_timeseries_bar",
-        dataset_name="news_ai_topics",
+        dataset_name="news_vietnam_articles",
         params={
             "viz_type":     "echarts_timeseries_bar",
             "x_axis":       "topic_label",
             "time_range":   "No filter",
-            "metrics":      [{"expressionType": "SIMPLE", "column": {"column_name": "article_count"}, "aggregate": "SUM", "label": "Số bài"}],
+            "metrics":      [{"expressionType": "SIMPLE", "column": {"column_name": "id"}, "aggregate": "COUNT", "label": "Số bài"}],
             "groupby":      [],
             "row_limit":    20,
             "order_desc":   True,
@@ -161,11 +178,12 @@ with app.app_context():
             "x_axis_title": "Chủ đề",
             "y_axis_title": "Số lượng bài báo",
             "color_scheme": "supersetColors",
+            "emit_filter":  True,
         }
     )
     if c4: charts.append(c4)
 
-    # Chart 5: Line Chart — Dự báo Số lượng Tin tức 7 ngày tới (LinearRegression)
+    # Chart 5: Line Chart — Dự báo Số lượng Tin tức 7 ngày tới (LinearRegression) [Miễn nhiễm cross-filter]
     c5 = create_or_update_chart(
         chart_name="📈 Dự báo Số lượng Tin tức 7 ngày tới (LinearRegression)",
         viz_type="echarts_timeseries_line",
@@ -190,16 +208,16 @@ with app.app_context():
     )
     if c5: charts.append(c5)
 
-    # Chart 6: Top nguồn báo
+    # Chart 6: Top nguồn báo (Cross-filter emitter)
     c6 = create_or_update_chart(
         chart_name="🏆 Top 10 Nguồn báo & Khối lượng",
         viz_type="echarts_timeseries_bar",
-        dataset_name="news_source_ranking",
+        dataset_name="news_vietnam_articles",
         params={
             "viz_type":     "echarts_timeseries_bar",
             "x_axis":       "source_name",
             "time_range":   "No filter",
-            "metrics":      [{"expressionType": "SIMPLE", "column": {"column_name": "article_count"}, "aggregate": "SUM", "label": "Số bài"}],
+            "metrics":      [{"expressionType": "SIMPLE", "column": {"column_name": "id"}, "aggregate": "COUNT", "label": "Số bài"}],
             "groupby":      [],
             "row_limit":    10,
             "order_desc":   True,
@@ -209,6 +227,7 @@ with app.app_context():
             "x_axis_title": "Nguồn báo",
             "y_axis_title": "Số lượng tin",
             "color_scheme": "supersetColors",
+            "emit_filter":  True,
         }
     )
     if c6: charts.append(c6)
@@ -228,15 +247,23 @@ with app.app_context():
     )
     if c7: charts.append(c7)
 
-    # Chart 8: Bảng tin tức tóm tắt AI
+    # Chart 8: Bảng tin tức tóm tắt AI (Được filter tự động theo các chart khác)
     c8 = create_or_update_chart(
         chart_name="📋 Danh sách Tin tức & Tóm tắt AI (Gemini)",
         viz_type="table",
-        dataset_name="news_ai_summary_table",
+        dataset_name="news_vietnam_articles",
         params={
             "viz_type":       "table",
-            "all_columns":    ["title", "source_name", "topic_label", "ensemble_sentiment_label", "ai_summary", "pub_date"],
-            "order_by_cols":  ["[\"pub_date\", false]"],
+            "all_columns":    [
+                "title",
+                "source_name",
+                "topic_label",
+                "ensemble_sentiment_label",
+                "vn_relevance_status",
+                "ai_summary",
+                "published_at"
+            ],
+            "order_by_cols":  ["[\"published_at\", false]"],
             "row_limit":      50,
             "page_length":    10,
             "include_search": True,
@@ -392,11 +419,47 @@ with app.app_context():
         dashboard_title=DASHBOARD_TITLE
     ).first()
 
+    # ── Cấu hình Cross-Filtering động & Độc lập Dự báo ────────────────────────
+    # Emitters: Các biểu đồ tương tác click (Chuẩn VN, Cảm xúc, Chủ đề, Top Nguồn)
+    interactive_emitters = [c for c in [c2, c3, c4, c6] if c]
+    # Listeners: Các biểu đồ cùng dataset news_vietnam_articles cập nhật theo filter
+    interactive_listeners = [c for c in [c1, c2, c3, c4, c6, c8] if c]
+    interactive_listener_ids = [c.id for c in interactive_listeners]
+
+    # Biểu đồ miễn nhiễm (ĐẶC BIỆT LÀ c5 - Dự báo 7 ngày LinearRegression theo yêu cầu)
+    immune_slices = [c.id for c in [c5, c7, c9, c10, c11] if c]
+
+    chart_configuration = {}
+    for emitter in interactive_emitters:
+        charts_in_scope = [cid for cid in interactive_listener_ids if cid != emitter.id]
+        chart_configuration[str(emitter.id)] = {
+            "id": emitter.id,
+            "crossFilters": {
+                "scope": {
+                    "rootPath": ["ROOT_ID"],
+                    "excluded": immune_slices,
+                },
+                "chartsInScope": charts_in_scope,
+            },
+        }
+
+    global_chart_configuration = {
+        "scope": {
+            "rootPath": ["ROOT_ID"],
+            "excluded": immune_slices,
+        },
+        "chartsInScope": interactive_listener_ids,
+    }
+
     json_metadata_dict = {
         "color_scheme": "supersetColors",
-        "refresh_frequency": 300,
+        "refresh_frequency": 0,
         "expanded_slices": {},
-        "timed_refresh_immune_slices": [],
+        "timed_refresh_immune_slices": immune_slices,
+        "cross_filters_immune_slices": immune_slices,
+        "cross_filters_enabled": True,
+        "chart_configuration": chart_configuration,
+        "global_chart_configuration": global_chart_configuration,
     }
 
     if not dashboard:
