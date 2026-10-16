@@ -245,34 +245,51 @@ with app.app_context():
     )
     if c8: charts.append(c8)
 
-    # Chart 9: Table — Đánh giá Độ uy tín Nguồn báo (Source Credibility Ranking)
+    # Chart 9: Horizontal Bar Chart — Đánh giá Độ uy tín Nguồn báo (Source Credibility Ranking)
     c9 = create_or_update_chart(
         chart_name="⭐ Xếp hạng Độ uy tín Nguồn báo Quốc tế (Source Credibility)",
-        viz_type="table",
+        viz_type="echarts_timeseries_bar",
         dataset_name="news_source_credibility",
         params={
-            "viz_type":       "table",
-            "all_columns":    ["source_name", "credibility_score", "vn_relevance_pct", "avg_word_count", "total_articles"],
-            "order_by_cols":  ["[\"credibility_score\", false]"],
-            "row_limit":      25,
-            "page_length":    10,
-            "include_search": True,
+            "viz_type":       "echarts_timeseries_bar",
+            "x_axis":         "source_name",
+            "time_range":     "No filter",
+            "metrics":        [{"expressionType": "SIMPLE", "column": {"column_name": "credibility_score"}, "aggregate": "AVG", "label": "Điểm uy tín (0-100)"}],
+            "groupby":        [],
+            "row_limit":      15,
+            "order_desc":     True,
+            "orientation":    "horizontal",
+            "show_legend":    False,
+            "rich_tooltip":   True,
+            "x_axis_title":   "Điểm uy tín (0-100)",
+            "y_axis_title":   "Nguồn báo",
+            "color_scheme":   "supersetColors",
         }
     )
     if c9: charts.append(c9)
 
-    # Chart 10: Table — Gom cụm Sự kiện Truyền thông (Story Clusters & Media Coverage)
+    # Chart 10: Horizontal Bar Chart — Gom cụm Sự kiện Truyền thông (Story Clusters & Media Coverage)
     c10 = create_or_update_chart(
         chart_name="🌐 Gom cụm Sự kiện & Độ phủ Truyền thông (Story Clusters)",
-        viz_type="table",
+        viz_type="echarts_timeseries_bar",
         dataset_name="news_story_clusters",
         params={
-            "viz_type":       "table",
-            "all_columns":    ["lead_title", "article_count", "unique_sources", "main_topic", "dominant_sentiment"],
-            "order_by_cols":  ["[\"article_count\", false]"],
-            "row_limit":      20,
-            "page_length":    10,
-            "include_search": True,
+            "viz_type":       "echarts_timeseries_bar",
+            "x_axis":         "lead_title",
+            "time_range":     "No filter",
+            "metrics":        [
+                {"expressionType": "SIMPLE", "column": {"column_name": "unique_sources"}, "aggregate": "MAX", "label": "Số nguồn báo đưa tin"},
+                {"expressionType": "SIMPLE", "column": {"column_name": "article_count"}, "aggregate": "MAX", "label": "Tổng số bài viết"}
+            ],
+            "groupby":        [],
+            "row_limit":      10,
+            "order_desc":     True,
+            "orientation":    "horizontal",
+            "show_legend":    True,
+            "rich_tooltip":   True,
+            "x_axis_title":   "Độ phủ truyền thông (Nguồn / Bài)",
+            "y_axis_title":   "Sự kiện tiêu biểu",
+            "color_scheme":   "supersetColors",
         }
     )
     if c10: charts.append(c10)

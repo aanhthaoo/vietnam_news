@@ -56,10 +56,30 @@ def _init_gemini():
         return False
 
 
+VN_KEYWORDS = [
+    r"\bvietnam\b", r"\bviet nam\b", r"\bvietnamese\b", r"\bhanoi\b",
+    r"\bha noi\b", r"\bho chi minh\b", r"\bhcmc\b", r"\bsaigon\b",
+    r"\bda nang\b", r"\bhai phong\b", r"\bcan tho\b", r"\bvinfast\b",
+    r"\bvingroup\b", r"\bmekong\b", r"\bvnd\b"
+]
+
+
+def extract_vietnam_context(text: str) -> Optional[str]:
+    """Tìm câu văn cụ thể trong bài có chứa từ khóa liên quan đến Việt Nam."""
+    if not text:
+        return None
+    sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+    pattern = re.compile("|".join(VN_KEYWORDS), re.IGNORECASE)
+    for s in sentences:
+        s_clean = s.strip()
+        if pattern.search(s_clean) and len(s_clean) > 20:
+            return s_clean
+    return None
+
+
 def fallback_summary(text: str, max_chars: int = 250) -> str:
     """
-    Tóm tắt trích xuất dự phòng khi không có kết nối Gemini API.
-    Lấy 1-2 câu đầu tiên có nghĩa.
+    Tóm tắt trích xuất cơ bản: lấy 1-2 câu đầu tiên có nghĩa.
     """
     if not text:
         return ""
@@ -77,10 +97,34 @@ def fallback_summary(text: str, max_chars: int = 250) -> str:
     return res if res else clean[:max_chars]
 
 
+def extract_contextual_summary(title: str, content: str, max_chars: int = 300) -> str:
+    """
+    Tóm tắt làm nổi bật bối cảnh Việt Nam kể cả khi bài viết nói về chủ đề quốc tế khác.
+    """
+    title_clean = (title or "").strip()
+    full_text = f"{title_clean}. {content or ''}".strip()
+    vn_in_title = bool(re.search(r"\b(vietnam|viet nam|vietnamese|hanoi|saigon|vinfast)\b", title_clean, re.I))
+
+    # Tìm câu chứa ngữ cảnh Việt Nam trong nội dung bài
+    vn_context = extract_vietnam_context(content)
+
+    # Nếu ngay tiêu đề đã là về Việt Nam
+    if vn_in_title:
+        return fallback_summary(full_text, max_chars=max_chars)
+
+    # Nếu tiêu đề không nói về VN nhưng nội dung có nhắc tới VN
+    if vn_context and vn_context.lower() != title_clean.lower():
+        lead = title_clean if len(title_clean) <= 130 else title_clean[:127] + "..."
+        ctx = vn_context if len(vn_context) <= 160 else vn_context[:157] + "..."
+        return f"[Chủ đề]: {lead} | 🇻🇳 [Ngữ cảnh VN]: {ctx}"
+
+    return fallback_summary(full_text, max_chars=max_chars)
+
+
 def summarize_article(title: str, content: str, max_words: int = 60) -> str:
     """
-    Tóm tắt bài báo bằng Gemini API hoặc Extractive Fallback.
-    Returns chuỗi tóm tắt súc tích (1-2 câu).
+    Tóm tắt bài báo bằng Gemini API hoặc Contextual Fallback.
+    BẮT BUỘC làm rõ lý do/ngữ cảnh xuất hiện của Việt Nam trong bài.
     """
     raw_text = f"{title or ''}. {content or ''}".strip()
     if not raw_text or len(raw_text) < 30:
@@ -88,30 +132,38 @@ def summarize_article(title: str, content: str, max_words: int = 60) -> str:
 
     if _init_gemini() and _model:
         prompt = (
-            f"Hãy tóm tắt ngắn gọn bài báo sau đây thành 1 đến 2 câu súc tích (dưới {max_words} từ), "
-            f"nêu bật sự kiện chính. Ngôn ngữ tiếng Việt:\n\n{raw_text[:2000]}"
+            f"Bạn là chuyên gia phân tích dữ liệu tin tức BI. Hãy tóm tắt bài báo sau thành 1 đến 2 câu súc tích (dưới {max_words} từ).\n"
+            f"YÊU CẦU ĐẶC BIỆT:\n"
+            f"- Nếu bài viết là về Việt Nam: Nêu bật sự kiện chính tại Việt Nam.\n"
+            f"- Nếu bài viết về chủ đề quốc tế nhưng có nhắc đến Việt Nam: BẮT BUỘC phải nêu chủ đề chính VÀ giải thích rõ Việt Nam được nhắc đến trong vai trò/ngữ cảnh gì (ví dụ: chuỗi cung ứng, đầu tư, ngoại giao, so sánh kinh tế...).\n\n"
+            f"Tiêu đề: {title}\n"
+            f"Nội dung: {content[:2500]}"
         )
         try:
             response = _model.generate_content(
                 prompt,
-                generation_config={"max_output_tokens": 120, "temperature": 0.2}
+                generation_config={"max_output_tokens": 140, "temperature": 0.2}
             )
             if response and response.text:
                 return response.text.strip().replace("\n", " ")
         except Exception as e:
-            logger.warning(f"[Gemini API Error] {e} -> Chuyển sang fallback.")
+            logger.warning(f"[Gemini API Error] {e} -> Chuyển sang contextual fallback.")
 
-    return fallback_summary(raw_text)
+    return extract_contextual_summary(title, content)
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    test_title = "Vietnam's economy grows 7.4% in Q3 driven by manufacturing and exports"
-    test_body = (
-        "Hanoi - Vietnam reported robust gross domestic product expansion in the third quarter of 2024. "
-        "The manufacturing sector led gains despite headwinds from global supply chain disruptions. "
-        "Foreign direct investment disbursements reached record highs according to the General Statistics Office."
-    )
-    print("--- TEST GEMINI / FALLBACK SUMMARIZER ---")
-    summary = summarize_article(test_title, test_body)
-    print("Tóm tắt:", summary)
+    print("--- TEST CONTEXTUAL SUMMARIZER ---")
+    
+    # Test 1: Bài tin chuẩn về Việt Nam
+    t1 = "Vietnam's economy grows 7.4% in Q3 driven by manufacturing and exports"
+    b1 = "Hanoi - Vietnam reported robust gross domestic product expansion in the third quarter of 2024. The manufacturing sector led gains."
+    print("\n[Bài 1 - Chuẩn Việt Nam]:")
+    print(summarize_article(t1, b1))
+
+    # Test 2: Bài tin quốc tế chỉ nhắc lướt Việt Nam
+    t2 = "Apple Q3 earnings show strong global growth in wearable tech"
+    b2 = "Tim Cook reported expanding margins across hardware divisions. The company highlighted continued resilience in its partner network across China, India, and Vietnam, where factory output rose modestly compared to the previous quarter."
+    print("\n[Bài 2 - Quốc tế nhắc lướt]:")
+    print(summarize_article(t2, b2))
