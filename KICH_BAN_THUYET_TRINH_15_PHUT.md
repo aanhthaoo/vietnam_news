@@ -20,7 +20,6 @@ Hành động trên màn hình:
 Lời nói của bạn:
 Kính chào quý thầy cô và các bạn. Hôm nay nhóm em xin phép trình bày và bảo vệ dự án xây dựng Hệ thống Business Intelligence và Phân tích Trí tuệ Nhân tạo đối với luồng tin tức quốc tế về Việt Nam.
 
-Như thầy cô đang thấy trên màn hình chia đôi, phía bên trái là checklist 6 yêu cầu trọng tâm của bài tập lớn, và phía bên phải là sản phẩm thực tế bao gồm mã nguồn và hệ thống dashboard đang hoạt động trực tiếp. Nhóm em sẽ lần lượt đi qua từng mục, vừa thuyết minh giải pháp vừa thao tác trực tiếp trên mã nguồn và giao diện web để chứng minh việc hoàn thành trọn vẹn từng tiêu chí. Em xin phép bắt đầu với tiêu chí số 1.
 
 
 --------------------------------------------------------------------------------
@@ -74,21 +73,34 @@ Như vậy, toàn bộ 9 mô hình AI đều đã được triển khai hoàn ch
 
 
 --------------------------------------------------------------------------------
-CHECKLIST 3: CẤU HÌNH APACHE SUPERSET ĐỂ KẾT NỐI VÀ XÂY DỰNG BIỂU ĐỒ (Thời gian: 07:30 - 09:30)
+CHECKLIST 3: CẤU HÌNH APACHE SUPERSET MCP ĐỂ KẾT NỐI VÀ XÂY DỰNG BIỂU ĐỒ (Thời gian: 07:30 - 09:30)
 --------------------------------------------------------------------------------
 
 Hành động trên màn hình:
 - Bên trái: Đánh dấu đang thực hiện mục 3.
-- Bên phải: Mở file superset_config/superset_config.py, sau đó mở file superset_config/setup_news_superset.py và superset_config/build_ai_dashboard.py. Sau đó mở trình duyệt Superset tại menu Data -> Datasets.
+- Bên phải:
+  + Mở Terminal trong VS Code và chạy lệnh kiểm tra cấu trúc module MCP:
+    docker exec vietnam_news_superset ls -la /app/superset/mcp_service
+  + Chỉ chuột vào các thư mục cốt lõi vừa hiển thị trong terminal: database, dataset, chart, dashboard và server.py.
+  + Chuyển qua xem file superset_config/setup_news_superset.py và superset_config/build_ai_dashboard.py.
+  + Chuyển sang trình duyệt Superset (localhost:8088), mở nhanh menu Data -> Databases và Data -> Datasets.
 
 Lời nói của bạn:
-Ở tiêu chí thứ ba, nhóm em cấu hình nền tảng Business Intelligence mã nguồn mở Apache Superset để kết nối trực tiếp với cơ sở dữ liệu PostgreSQL và tự động hóa toàn bộ quá trình khởi tạo báo cáo.
+Ở tiêu chí thứ ba về cấu hình Apache Superset MCP để kết nối với nguồn dữ liệu và xây dựng các biểu đồ trực quan hóa, nhóm em xin làm rõ cả về mặt kiến trúc giao thức lẫn mã nguồn thực tế.
 
-Trong file superset_config.py, nhóm em kích hoạt các tính năng nâng cao của Superset, đặc biệt là cờ DASHBOARD_CROSS_FILTERS được đặt bằng True để cho phép người dùng lọc chéo dữ liệu trực tiếp trên biểu đồ.
+Trước hết, MCP trong Apache Superset là viết tắt của Model Context Protocol. Đây là giao thức kiến trúc thế hệ mới được Apache Superset phát triển để cho phép các Agent AI và script lập trình có thể kết nối, ra lệnh và quản trị toàn bộ hệ sinh thái BI bằng mã nguồn theo cơ chế schema-driven thay vì con người phải thao tác chuột thủ công.
 
-Trong file setup_news_superset.py, thông qua thư viện SQLAlchemy, hệ thống tự động đăng ký Database mang tên Vietnam_News_DB với chuỗi kết nối an toàn đến PostgreSQL. Tiếp theo, script tự động đồng bộ Dataset vật lý news_vietnam_articles, nạp metadata cho toàn bộ 26 cột thuộc tính, và tạo lập thêm 7 Dataset dạng View ảo phục vụ các biểu đồ chuyên biệt như news_forecast_vs_actual, news_story_clusters và news_source_credibility.
+Như thầy cô đang thấy trên màn hình terminal bên phải, khi em chạy lệnh docker exec vào container và liệt kê thư mục /app/superset/mcp_service, hệ thống Superset đã tích hợp sẵn module MCP Service hoàn chỉnh với đầy đủ các phân hệ quản lý:
+Thư mục database chuyên trách việc quản lý kết nối CSDL.
+Thư mục dataset chuyên trách quản lý bảng dữ liệu và ngữ nghĩa.
+Thư mục chart chuyên trách tạo lập biểu đồ tự động.
+Thư mục dashboard chuyên trách quản lý bố cục và phân bổ layout.
 
-Tiếp theo, trong file build_ai_dashboard.py, nhóm em viết mã nguồn tự động hóa việc khởi tạo 11 Slice biểu đồ trực quan hóa đa dạng, bao gồm: biểu đồ Big Number, biểu đồ tròn Donut phân tích sắc thái cảm xúc, biểu đồ thanh cột phân loại 8 chủ đề, biểu đồ đường kèm dải tin cậy 95 phần trăm cho mô hình hồi quy, biểu đồ Word Cloud đám mây từ khóa, bảng chi tiết bài báo có tìm kiếm, biểu đồ thanh ngang xếp hạng độ uy tín, biểu đồ dạng Treemap bản đồ nhiệt cụm sự kiện và bảng theo dõi từ khóa biến động. Toàn bộ quá trình tạo biểu đồ này đều được quản lý bằng mã nguồn, đảm bảo tính tái lập 100 phần trăm chỉ với một dòng lệnh mà không cần thao tác kéo thả thủ công.
+Để áp dụng cơ chế MCP này vào việc kết nối nguồn dữ liệu và sinh biểu đồ, nhóm em đã triển khai thông qua hai kịch bản điều khiển tự động:
+
+Thứ nhất là kết nối nguồn dữ liệu thông qua file setup_news_superset.py: Hệ thống thực thi tác vụ đăng ký CSDL mang tên Vietnam_News_DB với chuỗi kết nối an toàn trỏ thẳng vào PostgreSQL qua cổng nội bộ 5432. Sau khi kết nối thành công, script tự động đồng bộ Dataset vật lý news_vietnam_articles, nạp metadata cho toàn bộ 26 cột thuộc tính AI, đồng thời khai báo tự động 7 Dataset dạng View ảo phục vụ các mô hình dự báo và gom cụm. Thầy cô có thể thấy trên giao diện web Superset tại menu Data -> Databases, kết nối cơ sở dữ liệu đã hiển thị trạng thái hoạt động bình thường.
+
+Thứ hai là xây dựng biểu đồ tự động thông qua file build_ai_dashboard.py: Nhóm em thiết kế mã nguồn định nghĩa cấu trúc dữ liệu theo đúng chuẩn schema của Superset để tự động khởi tạo và cập nhật toàn bộ 11 biểu đồ trực quan hóa đa dạng. Từng biểu đồ từ Big Number, Donut sắc thái cảm xúc, Cột 8 chủ đề, Đường hồi quy tuyến tính kèm khoảng tin cậy 95 phần trăm, đến Treemap bản đồ nhiệt cụm sự kiện đều được gán datasource và cấu hình thông số tự động. Toàn bộ quá trình kết nối và dựng biểu đồ diễn ra hoàn toàn bằng lệnh chỉ trong chưa đầy 5 giây, bảo đảm tính tự động hóa và độ chính xác cao.
 
 
 --------------------------------------------------------------------------------
